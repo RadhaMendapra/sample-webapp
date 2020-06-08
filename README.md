@@ -53,6 +53,7 @@ Web Application in AWS that accepts a POST request and returns a json formatted 
 	}
 }
 ```
+* To build and run the app via Docker, run `docker build .` and `docker run -ti --publish 8080:8080 imageid`
 * For provisioning infrastructure in AWS, download terraform and add the PATH to your environment variable.
 * Run the following terraform command to create the required infrastructure resources and enter access_key and secret_key when prompted.
 ```terraform init && terraform apply```
