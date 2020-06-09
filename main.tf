@@ -22,7 +22,7 @@ resource "aws_instance" "instance"{
   ami=var.ami_id
   instance_type="t2.micro"
   security_groups = [aws_security_group.instance_group.id]
-  key_name = ""
+  key_name = aws_key_pair.key_pair.key_name
 }
 
 //security groups
@@ -41,8 +41,8 @@ resource "aws_security_group_rule" "app_ingress_http" {
   type = "ingress"
   security_group_id = aws_security_group.instance_group.id
 
-  from_port = 3000
-  to_port = 3000
+  from_port = 8080
+  to_port = 8080
   protocol = "tcp"
   source_security_group_id = aws_security_group.lb_group.id
 }
@@ -71,8 +71,8 @@ resource "aws_security_group_rule" "lb_egress" {
   type = "egress"
   security_group_id = aws_security_group.lb_group.id
 
-  from_port = 3000
-  to_port = 3000
+  from_port = 8080
+  to_port = 8080
   protocol = "tcp"
   source_security_group_id = aws_security_group.instance_group.id
 }
@@ -94,5 +94,5 @@ resource "tls_private_key" "ssh_key" {
 
 resource "aws_key_pair" "key_pair" {
   key_name = "webapp-key"
-  public_key = "tls_private_key.ssh_key.public_key_openssh"
+  public_key = tls_private_key.ssh_key.public_key_openssh
 }
