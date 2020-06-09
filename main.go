@@ -63,60 +63,54 @@ func errorHandler(w http.ResponseWriter, msg string) {
 
 //function to handle accepting post request and returning json response
 func parseJSON(w http.ResponseWriter, r *http.Request) {
+	//initialize request and response struct
+	buildList := &request{}
+	responseList := response{}
 
-	if r.Method == "POST" {
-        //initialize request and response struct
-        buildList := &request{}
-        responseList := response{}
+	//set response content-type header to json
+	w.Header().Set("Content-Type", "application/json")
 
-        //set response content-type header to json
-        w.Header().Set("Content-Type", "application/json")
-
-		//read the body
-		body, err := ioutil.ReadAll(r.Body)
+	//read the body
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		errorHandler(w, "Unable to process request body")
+		return
+	}
+	//unmarshal the body containing json content
+	err = json.Unmarshal(body, buildList)
+	if err != nil {
+		errorHandler(w, "Unable to parse json body")
+		return
+	}
+	//for loop for BuildDate string to int conversion
+	currentDate := int64(0)
+	for _, v := range buildList.Jobs.BuildBaseAMI.Builds {
+		buildDate, err := strconv.ParseInt(v.BuildDate, 10, 64)
 		if err != nil {
-			errorHandler(w, "Unable to process request body")
+			errorHandler(w, "Unable to parse build date")
 			return
 		}
-		//unmarshal the body containing json content
-		err = json.Unmarshal(body, buildList)
-		if err != nil {
-			errorHandler(w, "Unable to parse json body")
-			return
-		}
-		//for loop for BuildDate string to int conversion
-		currentDate := int64(0)
-		for _, v := range buildList.Jobs.BuildBaseAMI.Builds {
-			buildDate, err := strconv.ParseInt(v.BuildDate, 10, 64)
-			if err != nil {
-				errorHandler(w, "Unable to parse build date")
+		if buildDate > currentDate {
+			currentDate = buildDate
+			outputList := strings.Split(v.Output, " ")
+			if len(outputList) != 4 {
+				errorHandler(w, "Incorrect json output")
 				return
 			}
-			if buildDate > currentDate {
-				currentDate = buildDate
-				outputList := strings.Split(v.Output, " ")
-				if len(outputList) != 4 {
-					errorHandler(w, "Incorrect json output")
-					return
-				}
-				responseList.Latest.BuildDate = v.BuildDate
-				responseList.Latest.AMIId = outputList[2]
-				responseList.Latest.CommitHash = outputList[3]
-			}
+			responseList.Latest.BuildDate = v.BuildDate
+			responseList.Latest.AMIId = outputList[2]
+			responseList.Latest.CommitHash = outputList[3]
 		}
-		//marshal the json content
-		response, err := json.MarshalIndent(responseList, "", "\t")
-		if err != nil {
-			errorHandler(w, "Internal error - Unable to marshal json response")
-			return
-		}
-		w.WriteHeader(http.StatusOK)
-		w.Write(response)
-	} else {
-		w.WriteHeader(http.StatusBadRequest)
-		errorHandler(w,"Only POST request is allowed")
-        return
 	}
+	//marshal the json content
+	response, err := json.MarshalIndent(responseList, "", "\t")
+	if err != nil {
+		errorHandler(w, "Internal error - Unable to marshal json response")
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	w.Write(response)
+
 }
 
 //main function using Chi to test locally
